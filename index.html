@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>Folder Link</title>
+<style>
+  :root {
+    --bg: #f6f6f4; --fg: #1d1d1b; --muted: #666660; --card: #ffffff;
+    --line: #dcdcd6; --accent: #1f5fa8; --accent-fg: #ffffff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #161615; --fg: #ececea; --muted: #a0a09a; --card: #20201f;
+      --line: #343432; --accent: #6aa3e8; --accent-fg: #0d0d0c;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #161615; --fg: #ececea; --muted: #a0a09a; --card: #20201f;
+    --line: #343432; --accent: #6aa3e8; --accent-fg: #0d0d0c;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font: 15px/1.5 "Segoe UI", system-ui, sans-serif;
+    display: flex; justify-content: center; padding: 48px 16px;
+  }
+  main {
+    width: 100%; max-width: 560px; background: var(--card);
+    border: 1px solid var(--line); border-radius: 10px; padding: 24px;
+  }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .name { font-size: 15px; color: var(--muted); margin: 0 0 18px; word-break: break-word; }
+  p { margin: 0 0 14px; }
+  .muted { color: var(--muted); font-size: 14px; }
+  button {
+    font: inherit; border: 1px solid var(--accent); border-radius: 6px;
+    padding: 7px 14px; cursor: pointer; background: var(--accent); color: var(--accent-fg);
+  }
+  button.plain { background: transparent; color: var(--accent); }
+  hr { border: 0; border-top: 1px solid var(--line); margin: 20px 0; }
+  code {
+    display: block; padding: 10px 12px; margin: 0 0 10px; border-radius: 6px;
+    background: var(--bg); border: 1px solid var(--line);
+    font: 13px/1.4 Consolas, monospace; word-break: break-all;
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1 id="title">Opening in File Explorer</h1>
+  <p class="name" id="name"></p>
+  <div id="ok">
+    <p>If your browser asks, tick <b>Always allow</b> and choose <b>Open</b>. You can close this tab once the folder opens.</p>
+    <p><button id="again">Open again</button></p>
+    <hr>
+    <p class="muted">Nothing opened? Folder Link isn't installed on this PC. Copy this path into the File Explorer address bar instead:</p>
+    <code id="path"></code>
+    <button class="plain" id="copy">Copy path</button>
+  </div>
+</main>
+<script>
+  // The folder travels after the "#", which the browser never sends to this server.
+  const SYNC_ROOT = 'C:\\SharePoint\\AI&PSMC';
+  const payload = location.hash.slice(1);
+  const valid = /^[A-Za-z0-9\-_.!~*'()%\/]*$/.test(payload);
+
+  let segments = null;
+  if (payload && valid) {
+    try { segments = payload.split('/').filter(Boolean).map(decodeURIComponent); }
+    catch (e) { segments = null; }
+  }
+
+  if (!segments || segments.some(s => s === '.' || s === '..' || /[\\:*?"<>|]/.test(s))) {
+    document.getElementById('title').textContent = 'This link is not valid';
+    document.getElementById('ok').hidden = true;
+  } else {
+    const localPath = [SYNC_ROOT].concat(segments).join('\\');
+    const open = () => { location.href = 'folderlink:' + payload; };
+
+    document.getElementById('name').textContent = segments[segments.length - 1];
+    document.getElementById('path').textContent = localPath;
+    document.getElementById('again').addEventListener('click', open);
+    document.getElementById('copy').addEventListener('click', async (e) => {
+      try { await navigator.clipboard.writeText(localPath); e.target.textContent = 'Copied'; }
+      catch (err) { e.target.textContent = 'Select the path above and copy it'; }
+    });
+    open();
+  }
+</script>
+</body>
+</html>
