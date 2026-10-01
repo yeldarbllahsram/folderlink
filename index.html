@@ -53,8 +53,9 @@
   <h1 id="title">Opening in File Explorer</h1>
   <p class="name" id="name"></p>
   <div id="ok">
-    <p>If your browser asks, tick <b>Always allow</b> and choose <b>Open</b>. You can close this tab once the folder opens.</p>
-    <p><button id="again">Open again</button></p>
+    <p id="first">If your browser asks, tick <b>Always allow</b> and choose <b>Open</b>. Once the folder opens, click <b>Close this tab</b>. From then on the tab closes itself.</p>
+    <p id="auto" hidden>This tab closes itself once the folder opens.</p>
+    <p><button id="again">Open again</button> <button class="plain" id="close">Close this tab</button></p>
     <hr>
     <p class="muted">Nothing opened? Folder Link isn't installed on this PC. Copy this path into the File Explorer address bar instead:</p>
     <code id="path"></code>
@@ -87,6 +88,28 @@
       try { await navigator.clipboard.writeText(localPath); e.target.textContent = 'Copied'; }
       catch (err) { e.target.textContent = 'Select the path above and copy it'; }
     });
+
+    // First visit in a browser never auto-closes: closing would also dismiss the browser's
+    // "Open Folder Link?" prompt before the person can tick Always allow. Clicking Close
+    // marks this browser as set up. After that, the tab closes once Explorer takes focus;
+    // if focus comes back first (nothing opened), it stays with the fallback path.
+    // Browsers only let a page close a tab it is alone in, which holds for a Teams click.
+    const SETUP_KEY = 'folderlink.setupDone';
+    let setupDone = false;
+    try { setupDone = localStorage.getItem(SETUP_KEY) === '1'; } catch (e) {}
+
+    document.getElementById('close').addEventListener('click', () => {
+      try { localStorage.setItem(SETUP_KEY, '1'); } catch (e) {}
+      window.close();
+    });
+
+    if (setupDone) {
+      document.getElementById('first').hidden = true;
+      document.getElementById('auto').hidden = false;
+      let closing = null;
+      window.addEventListener('blur', () => { closing = setTimeout(() => window.close(), 500); });
+      window.addEventListener('focus', () => clearTimeout(closing));
+    }
     open();
   }
 </script>
